@@ -1,81 +1,151 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Buscador de Distancias</title>
+    <title>Mapa Interactivo</title>
     <style>
-        html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
-        #map { position: absolute; top: 0; bottom: 0; right: 0; left: 0; }
-        #search-container { position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        body {
+            background-color: #0057B8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        #search-box {
+            width: 300px;
+            height: 30px;
+            padding: 5px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        #map-container {
+            position: relative;
+            width: 80%;
+            height: 60%;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css"/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
 </head>
 <body>
-    <div id="search-container">
-        <form id="address-form">
-            <div class="form-group">
-                <label for="address">Buscar dirección:</label>
-                <input type="text" id="address" class="form-control" placeholder="Ingrese una dirección">
-            </div>
-            <button type="submit" class="btn btn-primary">Buscar</button>
-        </form>
-        <div id="results"></div>
+    <div id="title">¿A cuánto está el hub de carga lenta más cercano?</div>
+    <input id="search-box" type="text" placeholder="Buscar dirección">
+    <div id="map-container">
+        <div id="map"></div>
     </div>
-    <div id="map"></div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+
+    <!-- Incluye tu clave de API de Google Maps -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAHB3N2CLyuGYEWdSCCHvmFfVx83ejvQSQ&libraries=places,geometry"></script>
     <script>
-        var map = L.map('map').setView([-33.4489, -70.6693], 11);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'Data by &copy; <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>.',
-        }).addTo(map);
-
-        var hubs = [
-            { name: "Estación Central", coords: [-33.453426, -70.705857], address: "Av. María Rozas Velásquez 73, Estación Central" },
-            { name: "San Miguel", coords: [-33.497331, -70.646509], address: "Gran Av. José Miguel Carrera 6150, San Miguel" },
-            { name: "La Florida", coords: [-33.50808, -70.599372], address: "Av. Vicuña Mackenna Ote. 6100, La Florida" },
-            { name: "San Miguel", coords: [-33.48735, -70.653302], address: "Llano Subercaseaux, San Miguel" },
-            { name: "Santiago", coords: [-33.451243, -70.652247], address: "San Francisco 75, Santiago" },
-            { name: "Santiago", coords: [-33.45625, -70.649641], address: "Nataniel Cox 620, Santiago" },
-            { name: "Santiago", coords: [-33.448039, -70.629895], address: "Av. Vicuña Mackenna 665, Santiago" },
-            { name: "Ñuñoa", coords: [-33.45551, -70.62846], address: "Av. Vicuña Mackenna 1700, Ñuñoa" },
-            { name: "Independencia", coords: [-33.417206, -70.652837], address: "Av. Independencia 565, Independencia" }
-        ];
-
-        hubs.forEach(function(hub) {
-            var marker = L.marker(hub.coords).addTo(map);
-            marker.bindPopup(hub.address);
-        });
-    </script>
-    <script>
-        $('#address-form').submit(function(e) {
-            e.preventDefault();
-            var address = $('#address').val();
-            
-            // Usar geocoding API para obtener coordenadas de la dirección ingresada
-            $.get('https://nominatim.openstreetmap.org/search?format=json&q=' + address, function(data) {
-                if (data.length > 0) {
-                    var lat = data[0].lat;
-                    var lon = data[0].lon;
-                    var userLocation = L.marker([lat, lon], { icon: L.AwesomeMarkers.icon({ icon: 'user', markerColor: 'blue' }) }).addTo(map);
-                    map.setView([lat, lon], 13);
-
-                    $('#results').html('<h4>Distancias a hubs:</h4>');
-                    hubs.forEach(function(hub) {
-                        var distance = map.distance([lat, lon], hub.coords);
-                        $('#results').append('<p>' + hub.address + ': ' + (distance / 1000).toFixed(2) + ' km</p>');
-                    });
-                } else {
-                    alert('Dirección no encontrada');
-                }
+        function initMap() {
+            const map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: { lat: -33.4489, lng: -70.6693 }, // Coordenadas de Santiago, Chile
+                mapTypeId: 'roadmap'
             });
-        });
+
+            const futureHubs = [
+                { name: "Las Rejas", lat: -33.456, lng: -70.719 },
+                { name: "Ciudad del Niño", lat: -33.501, lng: -70.651 },
+                { name: "Florida Center", lat: -33.511, lng: -70.602 },
+                { name: "Portal el Llano", lat: -33.482, lng: -70.640 },
+                { name: "Alto San Francisco", lat: -33.443, lng: -70.653 },
+                { name: "Nathaniel Cox", lat: -33.451, lng: -70.655 },
+                { name: "Vicuña Mackenna", lat: -33.458, lng: -70.641 },
+                { name: "Ñuble", lat: -33.464, lng: -70.631 },
+                { name: "Independencia", lat: -33.416, lng: -70.657 }
+            ];
+
+            const currentHubs = [
+                { name: "Parque Arauco", lat: -33.400, lng: -70.578 },
+                { name: "Espacio Urbano Las Rejas", lat: -33.454, lng: -70.719 }
+            ];
+
+            // Añadir marcadores para hubs futuros
+            futureHubs.forEach(location => {
+                new google.maps.Marker({
+                    position: { lat: location.lat, lng: location.lng },
+                    map: map,
+                    title: location.name,
+                    icon: {
+                        url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" // Icono azul para hubs futuros
+                    }
+                });
+            });
+
+            // Añadir marcadores para hubs actuales
+            currentHubs.forEach(location => {
+                new google.maps.Marker({
+                    position: { lat: location.lat, lng: location.lng },
+                    map: map,
+                    title: location.name,
+                    icon: {
+                        url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png" // Icono verde para hubs actuales
+                    }
+                });
+            });
+
+            const input = document.getElementById('search-box');
+            const searchBox = new google.maps.places.SearchBox(input);
+
+            map.controls[google.maps.ControlPosition.TOP_CENTER].push(input);
+
+            searchBox.addListener('places_changed', () => {
+                const places = searchBox.getPlaces();
+
+                if (places.length === 0) {
+                    return;
+                }
+
+                places.forEach(place => {
+                    if (!place.geometry) {
+                        return;
+                    }
+
+                    const placeLocation = place.geometry.location;
+
+                    // Calcular la distancia al hub más cercano
+                    let nearestHub = null;
+                    let minDistance = Infinity;
+
+                    const hubs = [...futureHubs, ...currentHubs];
+                    hubs.forEach(hub => {
+                        const hubLocation = new google.maps.LatLng(hub.lat, hub.lng);
+                        const distance = google.maps.geometry.spherical.computeDistanceBetween(placeLocation, hubLocation);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            nearestHub = hub;
+                        }
+                    });
+
+                    // Crear marcador basado en la distancia
+                    new google.maps.Marker({
+                        map: map,
+                        title: place.name,
+                        position: placeLocation,
+                        icon: {
+                            url: minDistance <= 3000 ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png" : "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
+                        }
+                    });
+
+                    map.setCenter(placeLocation);
+                });
+            });
+        }
+
+        google.maps.event.addDomListener(window, 'load', initMap);
     </script>
 </body>
 </html>
